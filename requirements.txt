@@ -1,4 +1,4 @@
-speechrecognition
 python-telegram-bot
+speechrecognition
 pydub
 ffmpeg
