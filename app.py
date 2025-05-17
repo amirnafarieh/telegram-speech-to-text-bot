@@ -5,8 +5,8 @@ import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
-    MessageHandler,
     CommandHandler,
+    MessageHandler,
     CallbackQueryHandler,
     ContextTypes,
     filters,
@@ -15,91 +15,113 @@ import speech_recognition as sr
 from pydub import AudioSegment
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHANNEL_USERNAME = "@amirnafarieh_co"
 ADMIN_ID = 130657071
+USAGE_FILE = "usage.json"
+PREMIUM_FILE = "premium.json"
 recognizer = sr.Recognizer()
 user_transcripts = {}
 
-USAGE_FILE = "usage.json"
-DAILY_LIMIT = 10
+# ---------- ابزارهای ذخیره ----------
 
-# --- ابزارهای مدیریت مصرف ---
-
-def load_usage():
-    if not os.path.exists(USAGE_FILE):
-        return {"free": {}, "unlimited": []}
-    with open(USAGE_FILE, "r") as f:
+def load_json(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def save_usage(data):
-    with open(USAGE_FILE, "w") as f:
-        json.dump(data, f)
+def save_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-def get_today_key():
-    return datetime.datetime.utcnow().strftime("%Y-%m-%d")
+def today():
+    return str(datetime.date.today())
 
-def is_unlimited(user_id, usage_data):
-    return user_id == ADMIN_ID or str(user_id) in usage_data.get("unlimited", [])
+def increase_usage(user_id):
+    usage = load_json(USAGE_FILE)
+    usage.setdefault("daily", {}).setdefault(today(), {}).setdefault(str(user_id), 0)
+    usage["daily"][today()][str(user_id)] += 1
+    save_json(USAGE_FILE, usage)
 
-def can_use(user_id):
-    usage = load_usage()
-    if is_unlimited(user_id, usage):
-        return True
-    today = get_today_key()
-    used = usage.get("free", {}).get(str(user_id), {}).get(today, 0)
-    return used < DAILY_LIMIT
+def get_usage_count(user_id):
+    usage = load_json(USAGE_FILE)
+    return usage.get("daily", {}).get(today(), {}).get(str(user_id), 0)
 
-def increment_usage(user_id):
-    usage = load_usage()
-    if is_unlimited(user_id, usage):
-        return
-    today = get_today_key()
-    usage.setdefault("free", {}).setdefault(str(user_id), {}).setdefault(today, 0)
-    usage["free"][str(user_id)][today] += 1
-    save_usage(usage)
+# ---------- مدیریت اشتراک ----------
 
-# --- بررسی عضویت در کانال ---
-
-async def check_membership(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    try:
-        member = await context.bot.get_chat_member(CHANNEL_USERNAME, user_id)
-        return member.status in ("member", "administrator", "creator")
-    except:
+def is_premium(user_id):
+    premiums = load_json(PREMIUM_FILE)
+    exp = premiums.get(str(user_id))
+    if not exp:
         return False
+    return datetime.date.fromisoformat(exp) >= datetime.date.today()
 
-# --- شروع ---
+def add_premium(user_id, days):
+    premiums = load_json(PREMIUM_FILE)
+    now = datetime.date.today()
+    new_exp = now + datetime.timedelta(days=days)
+    premiums[str(user_id)] = new_exp.isoformat()
+    save_json(PREMIUM_FILE, premiums)
+
+# ---------- دستورات ----------
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🎙️ خوش اومدی! برای استفاده رایگان از ربات، عضو کانال زیر شو:",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("📢 عضویت در کانال", url="https://t.me/amirnafarieh_co")],
-            [InlineKeyboardButton("✅ عضو شدم", callback_data="check_membership")]
-        ])
+    await update.message.reply_text("🎙️ سلام! فایل صوتی بفرست تا برات متنشو بنویسم. هر روز تا ۱۰ فایل رایگان ✨")
+
+async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (
+        "📢 برای دریافت اشتراک نامحدود:\n\n"
+        "💳 شماره کارت: 1234-5678-9012-3456\n"
+        "به یکی از مبالغ زیر پرداخت کنید:\n\n"
+        "▪️ ۵۰ هزار تومان → ۳۱ روز\n"
+        "▪️ ۱۰۰ هزار تومان → ۹۳ روز\n"
+        "▪️ ۳۵۰ هزار تومان → ۳۶۶ روز\n\n"
+        "سپس روی دکمه زیر بزن و رسید پرداخت رو ارسال کن:"
+    )
+    keyboard = [[InlineKeyboardButton("📤 ارسال رسید پرداخت", callback_data="send_receipt")]]
+    await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+
+async def handle_receipt_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text("🧾 لطفاً رسید پرداخت را به صورت تصویر یا متن ارسال کنید.\nادمین بررسی خواهد کرد.")
+    # اطلاع‌رسانی به ادمین
+    await context.bot.send_message(
+        chat_id=ADMIN_ID,
+        text=f"📥 کاربر @{query.from_user.username or 'بدون نام'} ({query.from_user.id}) گفته رسید پرداخت داره.\n✅ برای تأیید از /confirm <user_id> <days> استفاده کن."
     )
 
-async def handle_join_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = query.from_user.id
-    await query.answer()
-    if await check_membership(user_id, context):
-        await query.edit_message_text("✅ عضویت شما تأیید شد. حالا فایل صوتی بفرست 🎧")
+async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+    args = context.args
+    if len(args) == 2 and args[0].isdigit() and args[1].isdigit():
+        user_id, days = int(args[0]), int(args[1])
+        add_premium(user_id, int(days))
+        await update.message.reply_text(f"✅ دسترسی نامحدود به کاربر {user_id} برای {days} روز فعال شد.")
+        try:
+            await context.bot.send_message(chat_id=user_id, text="🎉 اشتراک شما با موفقیت فعال شد! حالا محدودیت ندارید.")
+        except:
+            pass
     else:
-        await query.edit_message_text("❌ هنوز عضو نشدی! عضو شو و دوباره تلاش کن.")
+        await update.message.reply_text("فرمت درست: /confirm <user_id> <days>")
 
-# --- فایل صوتی ---
+# ---------- پردازش فایل ----------
 
-async def process_audio(update: Update, context: ContextTypes.DEFAULT_TYPE, file_path: str):
+async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if not await check_membership(user_id, context):
-        await update.message.reply_text("🔒 اول باید عضو کانال بشی:\nhttps://t.me/amirnafarieh_co")
-        return
-    if not can_use(user_id):
-        await update.message.reply_text("🚫 شما به سقف استفاده روزانه رسیدید (۱۰ فایل صوتی).\n🕛 فردا دوباره امتحان کن.")
-        return
 
-    processing_msg = await update.message.reply_text("⏳ در حال تبدیل صدا به متن هستیم... لطفاً صبر کن 🧠")
-    audio = AudioSegment.from_file(file_path)
+    if not is_premium(user_id):
+        count = get_usage_count(user_id)
+        if count >= 10:
+            await update.message.reply_text("🚫 شما امروز به سقف ۱۰ فایل رایگان رسیدی.\nبرای نامحدود شدن از /subscribe استفاده کن.")
+            return
+        increase_usage(user_id)
+
+    file = await context.bot.get_file(update.message.voice.file_id if update.message.voice else update.message.audio.file_id)
+    filename = "input.ogg" if update.message.voice else (update.message.audio.file_name or "audio.mp3")
+    await file.download_to_drive(filename)
+
+    audio = AudioSegment.from_file(filename)
     audio.export("converted.wav", format="wav")
 
     with sr.AudioFile("converted.wav") as source:
@@ -107,107 +129,25 @@ async def process_audio(update: Update, context: ContextTypes.DEFAULT_TYPE, file
         try:
             result = recognizer.recognize_google(audio_data, language="fa-IR", show_all=True)
             if not result or "alternative" not in result:
-                await processing_msg.delete()
-                await update.message.reply_text("❌ متنی شناسایی نشد. لطفاً دوباره امتحان کن.")
+                await update.message.reply_text("❌ متنی شناسایی نشد.")
                 return
-
             full_text = result["alternative"][0]["transcript"]
             sentences = re.split(r'[.،؛!؟]\s*', full_text)
             sentences = [s.strip() for s in sentences if s.strip()]
-
-            await processing_msg.delete()
             for sentence in sentences:
-                await update.message.reply_text(f" {sentence}")
+                await update.message.reply_text(f"📝 {sentence}")
+        except:
+            await update.message.reply_text("⚠️ خطایی در تبدیل صدا به متن رخ داد.")
 
-            user_transcripts[user_id] = sentences
-            increment_usage(user_id)
-
-            await update.message.reply_text(
-                "💾 مایلید کدوم فایل رو دریافت کنید؟",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📄 فایل متنی (.txt)", callback_data="send_txt"),
-                     InlineKeyboardButton("🎬 زیرنویس (.srt)", callback_data="send_srt")]
-                ])
-            )
-        except sr.UnknownValueError:
-            await processing_msg.delete()
-            await update.message.reply_text("🤷‍♂️ متأسفم، نتونستم صدای شما رو بفهمم.")
-        except sr.RequestError:
-            await processing_msg.delete()
-            await update.message.reply_text("⚠️ خطا در ارتباط با Google. لطفاً بعداً امتحان کن.")
-
-async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    file = await context.bot.get_file(update.message.voice.file_id)
-    await file.download_to_drive("voice.ogg")
-    await process_audio(update, context, "voice.ogg")
-
-async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    file = await context.bot.get_file(update.message.audio.file_id)
-    filename = update.message.audio.file_name or "audio.mp3"
-    await file.download_to_drive(filename)
-    await process_audio(update, context, filename)
-
-# --- ارسال فایل‌ها ---
-
-async def handle_file_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = query.from_user.id
-    await query.answer()
-    sentences = user_transcripts.get(user_id)
-
-    if not sentences:
-        await query.edit_message_text("❗ هیچ متنی پیدا نشد. لطفاً یک فایل صوتی ارسال کن.")
-        return
-
-    if query.data == "send_txt":
-        with open("transcription.txt", "w", encoding="utf-8") as f:
-            f.write("\n".join(sentences))
-        await context.bot.send_document(chat_id=query.message.chat.id, document=open("transcription.txt", "rb"))
-
-    elif query.data == "send_srt":
-        with open("transcription.srt", "w", encoding="utf-8") as f:
-            for i, sentence in enumerate(sentences, start=1):
-                start = f"00:00:{i:02},000"
-                end = f"00:00:{i+1:02},000"
-                f.write(f"{i}\n{start} --> {end}\n{sentence}\n\n")
-        await context.bot.send_document(chat_id=query.message.chat.id, document=open("transcription.srt", "rb"))
-
-    await query.edit_message_text("✅ فایل موردنظر برای شما ارسال شد.")
-
-# --- پنل ادمین ---
-
-async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        return
-    await update.message.reply_text("🛠️ پنل ادمین فعال است.\nبرای افزودن دسترسی نامحدود:\n`/add_unlimited <user_id>`")
-
-async def add_unlimited(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        return
-    if not context.args:
-        await update.message.reply_text("❗ لطفاً آیدی عددی کاربر را وارد کنید.")
-        return
-    target_id = context.args[0]
-    usage = load_usage()
-    if target_id not in usage.get("unlimited", []):
-        usage.setdefault("unlimited", []).append(target_id)
-        save_usage(usage)
-        await update.message.reply_text(f"✅ کاربر {target_id} به لیست نامحدود اضافه شد.")
-    else:
-        await update.message.reply_text("ℹ️ این کاربر قبلاً در لیست نامحدود بوده است.")
-
-# --- اجرای ربات ---
+# ---------- اجرای ربات ----------
 
 def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("admin", admin_command))
-    app.add_handler(CommandHandler("add_unlimited", add_unlimited))
-    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
-    app.add_handler(MessageHandler(filters.AUDIO, handle_audio))
-    app.add_handler(CallbackQueryHandler(handle_file_buttons, pattern="send_"))
-    app.add_handler(CallbackQueryHandler(handle_join_check, pattern="check_membership"))
+    app.add_handler(CommandHandler("subscribe", subscribe))
+    app.add_handler(CommandHandler("confirm", confirm))
+    app.add_handler(CallbackQueryHandler(handle_receipt_request, pattern="send_receipt"))
+    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_audio))
     app.run_polling()
 
 if __name__ == "__main__":
