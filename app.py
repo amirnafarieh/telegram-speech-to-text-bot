@@ -1,59 +1,37 @@
-import os
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
-import speech_recognition as sr
+from telegram.ext import Application, MessageHandler, ContextTypes, filters
 from pydub import AudioSegment
+import speech_recognition as sr
 
-# خواندن توکن از متغیر محیطی
-TOKEN = os.getenv('TELEGRAM_TOKEN')  # توکن را از متغیر محیطی می‌خوانیم
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # دریافت فایل Voice و دانلود آن به عنوان voice_note.ogg
+    file_id = update.message.voice.file_id
+    file = await context.bot.get_file(file_id)
+    await file.download_to_drive(custom_path="voice_note.ogg")  # ذخیره پیام صوتی با نام voice_note.ogg
 
-# راه‌اندازی ربات با استفاده از Application
-application = Application.builder().token(TOKEN).build()
+    # تبدیل فایل .ogg به .wav با استفاده از pydub/ffmpeg (برای استفاده در تشخیص گفتار)
+    voice_audio = AudioSegment.from_file("voice_note.ogg", format="ogg")
+    voice_audio.export("voice_note.wav", format="wav")
 
-# تشخیص گفتار
-recognizer = sr.Recognizer()
-
-# تابع start برای پاسخ به دستور /start
-async def start(update: Update, context: CallbackContext) -> None:
-    """این تابع برای پاسخ به دستور /start است."""
-    await update.message.reply_text("سلام! لطفا فایل صوتی ارسال کنید.")
-
-# تابع برای پردازش فایل صوتی و تبدیل به متن
-async def handle_audio(update: Update, context: CallbackContext) -> None:
-    """این تابع فایل صوتی را دریافت کرده و آن را به متن تبدیل می‌کند."""
-    
-    # دریافت فایل صوتی
-    file = await update.message.audio.get_file()
-    
-    # دانلود فایل به صورت MP3
-    await file.download('audio.mp3')  # استفاده از متد download به جای download_as
-
-    # تبدیل MP3 به WAV (speech_recognition فقط فایل WAV را می‌پذیرد)
-    audio = AudioSegment.from_mp3('audio.mp3')
-    audio.export('audio.wav', format='wav')
-
-    # تبدیل فایل صوتی به متن
-    with sr.AudioFile('audio.wav') as source:
+    # تبدیل گفتار به متن با SpeechRecognition (مثال با استفاده از سرویس Google)
+    recognizer = sr.Recognizer()
+    with sr.AudioFile("voice_note.wav") as source:
         audio_data = recognizer.record(source)
-        try:
-            # شناسایی گفتار به زبان فارسی
-            text = recognizer.recognize_google(audio_data, language='fa-IR')  
-            await update.message.reply_text(f"متن شناسایی‌شده: {text}")
+    text = recognizer.recognize_google(audio_data, language="fa-IR")
+    await update.message.reply_text(f"متن تشخیص‌داده‌شده: {text}")
 
-            # ارسال فایل متنی
-            with open("transcription.txt", "w", encoding="utf-8") as f:
-                f.write(text)
-            
-            await update.message.reply_document(document=open("transcription.txt", "rb"))
+async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # دریافت فایل Audio و دانلود آن به عنوان audio_file.mp3 (یا پسوند اصلی فایل ارسالی)
+    file_id = update.message.audio.file_id
+    file = await context.bot.get_file(file_id)
+    # استفاده از نام اصلی فایل در تلگرام در صورت موجود بودن
+    default_filename = update.message.audio.file_name or "audio_file"
+    await file.download_to_drive(custom_path=default_filename)  # مثلاً audio_file.mp3
+    await update.message.reply_text("فایل صوتی شما ذخیره شد.")
 
-        except sr.UnknownValueError:
-            await update.message.reply_text("متاسفانه نتواستم چیزی بشنوم.")
-        except sr.RequestError:
-            await update.message.reply_text("خطا در ارتباط با سرویس شناسایی صوت.")
-
-# افزودن هندلرها
-application.add_handler(CommandHandler("start", start))
-application.add_handler(MessageHandler(filters.AUDIO, handle_audio))
-
-# شروع ربات
-application.run_polling()
+if __name__ == "__main__":
+    app = Application.builder().token("توکن-ربات-شما").build()
+    # افزودن هندلرها برای پیام‌های صوتی و فایل‌های صوتی
+    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+    app.add_handler(MessageHandler(filters.AUDIO, handle_audio))
+    app.run_polling()
