@@ -5,7 +5,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 import speech_recognition as sr
 from pydub import AudioSegment
 
-# دریافت توکن ربات از BotFather
+# توکن ربات تلگرام
 TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
 
 # راه‌اندازی ربات
@@ -14,9 +14,11 @@ updater = Updater(TOKEN)
 # تشخیص گفتار
 recognizer = sr.Recognizer()
 
+# تابع start برای پاسخ به دستور /start
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("سلام! لطفا فایل صوتی ارسال کنید.")
 
+# تابع برای پردازش فایل صوتی و تبدیل به متن
 def handle_audio(update: Update, context: CallbackContext) -> None:
     file = update.message.audio.get_file()
     file.download('audio.mp3')  # دانلود فایل به صورت MP3
