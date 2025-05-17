@@ -1,5 +1,5 @@
 import os
-import whisper
+import speech_recognition as sr
 from pydub import AudioSegment
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
@@ -9,24 +9,31 @@ import logging
 # ایجاد اپلیکیشن Flask
 app = Flask(__name__)
 
-# بارگذاری مدل Whisper
-model = whisper.load_model("base")  # مدل Whisper را بارگذاری می‌کنیم
+# فرمان شروع برای ربات
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("سلام! لطفا یک فایل صوتی ارسال کنید.")
 
-# تبدیل فایل MP3 به WAV
+# تبدیل MP3 به WAV
 def convert_mp3_to_wav(mp3_file):
     audio = AudioSegment.from_mp3(mp3_file)
     wav_file = "audio.wav"
     audio.export(wav_file, format="wav")
     return wav_file
 
-# تابع تبدیل گفتار به متن با استفاده از Whisper
+# تبدیل گفتار به متن با استفاده از speech_recognition
 def transcribe_audio(wav_file):
-    result = model.transcribe(wav_file, language="fa")  # زبان فارسی
-    return result['text']
-
-# فرمان شروع برای ربات
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("سلام! لطفا یک فایل صوتی ارسال کنید.")
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(wav_file) as source:
+        audio = recognizer.record(source)
+    
+    try:
+        # استفاده از Google Web Speech API برای تبدیل گفتار به متن
+        transcription = recognizer.recognize_google(audio, language="fa-IR")
+        return transcription
+    except sr.UnknownValueError:
+        return "نمی‌توانم متن را تشخیص دهم"
+    except sr.RequestError as e:
+        return f"خطا در درخواست: {e}"
 
 # دریافت فایل صوتی از کاربر و تبدیل آن به متن
 def handle_audio(update: Update, context: CallbackContext):
