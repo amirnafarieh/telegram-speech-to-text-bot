@@ -1,4 +1,4 @@
-python-telegram-bot==20.0
-speechrecognition==3.9.0
-pydub==0.25.1
-flask==2.0.2
+speechrecognition
+python-telegram-bot
+pydub
+ffmpeg
