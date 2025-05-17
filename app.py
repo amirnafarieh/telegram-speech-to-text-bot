@@ -26,7 +26,7 @@ async def handle_audio(update: Update, context: CallbackContext) -> None:
     file = await update.message.audio.get_file()
     
     # دانلود فایل به صورت MP3
-    await file.download_as('audio.mp3')  
+    await file.download('audio.mp3')  # استفاده از متد download به جای download_as
 
     # تبدیل MP3 به WAV (speech_recognition فقط فایل WAV را می‌پذیرد)
     audio = AudioSegment.from_mp3('audio.mp3')
