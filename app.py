@@ -6,6 +6,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 from flask import Flask
 import logging
 
+# تنظیمات برای شروع Flask
 app = Flask(__name__)
 
 # فرمان شروع برای ربات
@@ -53,17 +54,19 @@ def main():
     # توکن API ربات تلگرام خود را اینجا وارد کنید
     TOKEN = os.getenv("TELEGRAM_API_TOKEN")
     
+    # تنظیمات Updater برای ارتباط با تلگرام
     updater = Updater(TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
-    # اضافه کردن هندلرها
+    # اضافه کردن هندلرها برای فرمان‌های ربات
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(MessageHandler(Filters.audio, handle_audio))
 
-    # شروع ربات
+    # شروع ربات تلگرام
     updater.start_polling()
     updater.idle()
 
+# اجرای ربات در Flask
 @app.route('/')
 def hello():
     return "Bot is running!"
