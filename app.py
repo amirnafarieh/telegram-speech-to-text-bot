@@ -11,11 +11,11 @@ recognizer = sr.Recognizer()
 
 # پاسخ به /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("سلام! لطفاً یک فایل صوتی (Voice یا MP3) بفرستید تا تبدیل به متن شود.")
+    await update.message.reply_text("🎙️ سلام! خوش اومدی به ربات تبدیل صدا به متن 🎧\n\n📤 لطفاً یک فایل صوتی (Voice یا MP3) ارسال کن تا متنش رو برات بنویسم ✍️")
 
 # هندل پیام‌های صوتی Voice
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    processing_message = await update.message.reply_text("در حال تبدیل صدا به متن هستیم... لطفاً کمی منتظر باشید.")
+    processing_message = await update.message.reply_text("⏳ در حال تبدیل صدا به متن هستیم... لطفاً چند لحظه صبر کن 🧠")
 
     file = await context.bot.get_file(update.message.voice.file_id)
     await file.download_to_drive("voice.ogg")
@@ -30,7 +30,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if not result or "alternative" not in result:
                 await processing_message.delete()
-                await update.message.reply_text("متنی شناسایی نشد.")
+                await update.message.reply_text("❌ متنی شناسایی نشد. لطفاً دوباره امتحان کن.")
                 return
 
             full_text = result["alternative"][0]["transcript"]
@@ -39,23 +39,24 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await processing_message.delete()
             for sentence in sentences:
-                await update.message.reply_text(sentence)
+                await update.message.reply_text(f"📝 {sentence}")
 
             with open("transcription.txt", "w", encoding="utf-8") as f:
                 f.write(full_text)
             await update.message.reply_document(open("transcription.txt", "rb"))
-            await update.message.reply_text("برای تبدیل فایل بعدی، لطفاً فایل صوتی دیگری ارسال کنید.")
+
+            await update.message.reply_text("📩 فایل متنی برات فرستاده شد.\n\n🎧 برای تبدیل فایل بعدی، لطفاً یک صدا یا موسیقی دیگه بفرست 😊")
 
         except sr.UnknownValueError:
             await processing_message.delete()
-            await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
+            await update.message.reply_text("🤷‍♂️ متأسفم، نتونستم صدای شما رو بفهمم.")
         except sr.RequestError:
             await processing_message.delete()
-            await update.message.reply_text("خطا در ارتباط با سرور Google Speech!")
+            await update.message.reply_text("⚠️ خطا در ارتباط با سرور Google. لطفاً بعداً امتحان کن.")
 
 # هندل فایل‌های صوتی Audio
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    processing_message = await update.message.reply_text("در حال تبدیل صدا به متن هستیم... لطفاً کمی منتظر باشید.")
+    processing_message = await update.message.reply_text("⏳ در حال تبدیل صدا به متن هستیم... لطفاً چند لحظه صبر کن 🧠")
 
     file = await context.bot.get_file(update.message.audio.file_id)
     filename = update.message.audio.file_name or "audio.mp3"
@@ -71,7 +72,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if not result or "alternative" not in result:
                 await processing_message.delete()
-                await update.message.reply_text("متنی شناسایی نشد.")
+                await update.message.reply_text("❌ متنی شناسایی نشد. لطفاً دوباره امتحان کن.")
                 return
 
             full_text = result["alternative"][0]["transcript"]
@@ -80,19 +81,20 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await processing_message.delete()
             for sentence in sentences:
-                await update.message.reply_text(sentence)
+                await update.message.reply_text(f"📝 {sentence}")
 
             with open("transcription.txt", "w", encoding="utf-8") as f:
                 f.write(full_text)
             await update.message.reply_document(open("transcription.txt", "rb"))
-            await update.message.reply_text("برای تبدیل فایل بعدی، لطفاً فایل صوتی دیگری ارسال کنید.")
+
+            await update.message.reply_text("📩 فایل متنی برات فرستاده شد.\n\n🎧 برای تبدیل فایل بعدی، لطفاً یک صدا یا موسیقی دیگه بفرست 😊")
 
         except sr.UnknownValueError:
             await processing_message.delete()
-            await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
+            await update.message.reply_text("🤷‍♂️ متأسفم، نتونستم صدای شما رو بفهمم.")
         except sr.RequestError:
             await processing_message.delete()
-            await update.message.reply_text("خطا در ارتباط با سرور Google Speech!")
+            await update.message.reply_text("⚠️ خطا در ارتباط با سرور Google. لطفاً بعداً امتحان کن.")
 
 # اجرای ربات
 def main():
