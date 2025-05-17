@@ -9,9 +9,9 @@ import logging
 # تنظیمات برای شروع Flask
 app = Flask(__name__)
 
-# فرمان شروع برای ربات
+# فرمان شروع برای ربات (خوش‌آمدگویی)
 def start(update: Update, context: CallbackContext):
-    update.message.reply_text("سلام! لطفا یک فایل صوتی ارسال کنید.")
+    update.message.reply_text("سلام! خوش آمدید. لطفاً یک فایل صوتی ارسال کنید تا متن آن را دریافت کنید.")
 
 # تبدیل MP3 به WAV
 def convert_mp3_to_wav(mp3_file):
@@ -37,6 +37,10 @@ def transcribe_audio(wav_file):
 
 # دریافت فایل صوتی از کاربر و تبدیل آن به متن
 def handle_audio(update: Update, context: CallbackContext):
+    # ارسال پیغام برای اطلاع‌رسانی به کاربر
+    update.message.reply_text("در حال تبدیل فایل صوتی به متن هستیم، لطفاً منتظر بمانید...")
+
+    # دانلود فایل صوتی
     file = update.message.audio.get_file()
     file.download("user_audio.mp3")
 
@@ -76,4 +80,3 @@ if __name__ == '__main__':
     thread = Thread(target=main)
     thread.start()
     app.run(host='0.0.0.0', port=5000)
-
