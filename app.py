@@ -3,6 +3,7 @@ from telegram import Update
 from telegram.ext import Application, MessageHandler, CommandHandler, ContextTypes, filters
 import speech_recognition as sr
 from pydub import AudioSegment
+import re
 
 # خواندن توکن از متغیر محیطی
 TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -25,11 +26,23 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     with sr.AudioFile("converted.wav") as source:
         audio_data = recognizer.record(source)
         try:
-            text = recognizer.recognize_google(audio_data, language="fa-IR")
-            await update.message.reply_text(f"متن شناسایی‌شده:\n{text}")
+            result = recognizer.recognize_google(audio_data, language="fa-IR", show_all=True)
+
+            if not result or "alternative" not in result:
+                await update.message.reply_text("متنی شناسایی نشد.")
+                return
+
+            full_text = result["alternative"][0]["transcript"]
+            sentences = re.split(r'[.،؛!؟]\s*', full_text)
+            sentences = [s.strip() for s in sentences if s.strip()]
+
+            for sentence in sentences:
+                await update.message.reply_text(sentence)
+
             with open("transcription.txt", "w", encoding="utf-8") as f:
-                f.write(text)
+                f.write(full_text)
             await update.message.reply_document(open("transcription.txt", "rb"))
+
         except sr.UnknownValueError:
             await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
         except sr.RequestError:
@@ -47,11 +60,23 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     with sr.AudioFile("converted.wav") as source:
         audio_data = recognizer.record(source)
         try:
-            text = recognizer.recognize_google(audio_data, language="fa-IR")
-            await update.message.reply_text(f"متن شناسایی‌شده:\n{text}")
+            result = recognizer.recognize_google(audio_data, language="fa-IR", show_all=True)
+
+            if not result or "alternative" not in result:
+                await update.message.reply_text("متنی شناسایی نشد.")
+                return
+
+            full_text = result["alternative"][0]["transcript"]
+            sentences = re.split(r'[.،؛!؟]\s*', full_text)
+            sentences = [s.strip() for s in sentences if s.strip()]
+
+            for sentence in sentences:
+                await update.message.reply_text(sentence)
+
             with open("transcription.txt", "w", encoding="utf-8") as f:
-                f.write(text)
+                f.write(full_text)
             await update.message.reply_document(open("transcription.txt", "rb"))
+
         except sr.UnknownValueError:
             await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
         except sr.RequestError:
@@ -61,16 +86,12 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(TOKEN).build()
 
-    # فرمان شروع
     app.add_handler(CommandHandler("start", start))
-
-    # دریافت پیام صوتی (voice note)
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
-
-    # دریافت فایل موسیقی یا صوتی
     app.add_handler(MessageHandler(filters.AUDIO, handle_audio))
 
     app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
