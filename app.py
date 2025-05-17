@@ -9,7 +9,7 @@ import logging
 # تنظیمات برای شروع Flask
 app = Flask(__name__)
 
-# فرمان شروع برای ربات (خوش‌آمدگویی)
+# فرمان شروع برای ربات
 def start(update: Update, context: CallbackContext):
     update.message.reply_text("سلام! خوش آمدید. لطفاً یک فایل صوتی ارسال کنید تا متن آن را دریافت کنید.")
 
@@ -76,7 +76,6 @@ def hello():
     return "Bot is running!"
 
 if __name__ == '__main__':
-    from threading import Thread
-    thread = Thread(target=main)
-    thread.start()
+    # شروع ربات تلگرام در رشته اصلی (main thread)
+    main()
     app.run(host='0.0.0.0', port=5000)
