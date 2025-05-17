@@ -5,8 +5,8 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 import speech_recognition as sr
 from pydub import AudioSegment
 
-# توکن ربات تلگرام
-TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
+# توکن ربات تلگرام (توکن خود را اینجا وارد کنید)
+TOKEN = 8070635714:AAGsFUE2fimsKZY-rEjAcDrcZMMkRqVzVLM
 
 # راه‌اندازی ربات
 updater = Updater(TOKEN)
