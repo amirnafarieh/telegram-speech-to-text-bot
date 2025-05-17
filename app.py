@@ -44,6 +44,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with open("transcription.txt", "w", encoding="utf-8") as f:
                 f.write(full_text)
             await update.message.reply_document(open("transcription.txt", "rb"))
+            await update.message.reply_text("برای تبدیل فایل بعدی، لطفاً فایل صوتی دیگری ارسال کنید.")
 
         except sr.UnknownValueError:
             await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
@@ -80,6 +81,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             with open("transcription.txt", "w", encoding="utf-8") as f:
                 f.write(full_text)
             await update.message.reply_document(open("transcription.txt", "rb"))
+            await update.message.reply_text("برای تبدیل فایل بعدی، لطفاً فایل صوتی دیگری ارسال کنید.")
 
         except sr.UnknownValueError:
             await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
