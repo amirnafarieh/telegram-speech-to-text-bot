@@ -1,3 +1,4 @@
-vosk
-python-telegram-bot
-pydub
+python-telegram-bot==13.12
+whisper==1.0.0
+flask==2.0.1
+pydub==0.25.1
