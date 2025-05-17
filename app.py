@@ -4,9 +4,14 @@ from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 import speech_recognition as sr
 from pydub import AudioSegment
+from dotenv import load_dotenv
 
-# توکن ربات تلگرام (توکن خود را اینجا وارد کنید)
-TOKEN = 8070635714:AAGsFUE2fimsKZY-rEjAcDrcZMMkRqVzVLM
+# بارگذاری متغیرهای محیطی از فایل .env (این بخش فقط برای محیط‌های لوکال است)
+# در Railway نیازی به این خط نیست زیرا متغیرهای محیطی در تنظیمات Railway تنظیم می‌شوند
+load_dotenv()
+
+# خواندن توکن از متغیر محیطی
+TOKEN = os.getenv('TELEGRAM_TOKEN')  # توکن را از متغیر محیطی می‌خوانیم
 
 # راه‌اندازی ربات
 updater = Updater(TOKEN)
