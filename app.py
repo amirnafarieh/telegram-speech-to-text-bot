@@ -47,7 +47,7 @@ async def handle_audio(update: Update, context: CallbackContext) -> None:
 
 # افزودن هندلرها
 application.add_handler(CommandHandler("start", start))
-application.add_handler(MessageHandler(filters.Audio, handle_audio))
+application.add_handler(MessageHandler(filters.AUDIO, handle_audio))
 
 # شروع ربات
 application.run_polling()
