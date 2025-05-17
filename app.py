@@ -3,10 +3,9 @@ import speech_recognition as sr
 from pydub import AudioSegment
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-from flask import Flask, request
+from flask import Flask
 import logging
 
-# ایجاد اپلیکیشن Flask
 app = Flask(__name__)
 
 # فرمان شروع برای ربات
@@ -65,7 +64,6 @@ def main():
     updater.start_polling()
     updater.idle()
 
-# اجرای ربات در Flask
 @app.route('/')
 def hello():
     return "Bot is running!"
