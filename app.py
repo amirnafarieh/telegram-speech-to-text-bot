@@ -70,4 +70,17 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     processing_message = await update.message.reply_text("در حال تبدیل صدا به متن هستیم... لطفاً کمی منتظر باشید.")
     file = await context.bot.get_file(update.message.audio.file_id)
     filename = update.message.audio.file_name or "audio.mp3"
-    await file.download_to_drive(filen
+    await file.download_to_drive(filename)
+    await process_audio(filename, update, processing_message)
+
+# راه‌اندازی ربات
+def main():
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+    app.add_handler(MessageHandler(filters.AUDIO, handle_audio))
+    app.run_polling()
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
