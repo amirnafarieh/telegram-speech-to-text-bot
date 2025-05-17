@@ -1,82 +1,52 @@
 import os
-import speech_recognition as sr
-from pydub import AudioSegment
+import telegram
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-from flask import Flask
-import logging
+import speech_recognition as sr
+from pydub import AudioSegment
 
-# تنظیمات برای شروع Flask
-app = Flask(__name__)
+# دریافت توکن ربات از BotFather
+TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
 
-# فرمان شروع برای ربات
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("سلام! خوش آمدید. لطفاً یک فایل صوتی ارسال کنید تا متن آن را دریافت کنید.")
+# راه‌اندازی ربات
+updater = Updater(TOKEN)
 
-# تبدیل MP3 به WAV
-def convert_mp3_to_wav(mp3_file):
-    audio = AudioSegment.from_mp3(mp3_file)
-    wav_file = "audio.wav"
-    audio.export(wav_file, format="wav")
-    return wav_file
+# تشخیص گفتار
+recognizer = sr.Recognizer()
 
-# تبدیل گفتار به متن با استفاده از speech_recognition
-def transcribe_audio(wav_file):
-    recognizer = sr.Recognizer()
-    with sr.AudioFile(wav_file) as source:
-        audio = recognizer.record(source)
-    
-    try:
-        # استفاده از Google Web Speech API برای تبدیل گفتار به متن
-        transcription = recognizer.recognize_google(audio, language="fa-IR")
-        return transcription
-    except sr.UnknownValueError:
-        return "نمی‌توانم متن را تشخیص دهم"
-    except sr.RequestError as e:
-        return f"خطا در درخواست: {e}"
+def start(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text("سلام! لطفا فایل صوتی ارسال کنید.")
 
-# دریافت فایل صوتی از کاربر و تبدیل آن به متن
-def handle_audio(update: Update, context: CallbackContext):
-    # ارسال پیغام برای اطلاع‌رسانی به کاربر
-    update.message.reply_text("در حال تبدیل فایل صوتی به متن هستیم، لطفاً منتظر بمانید...")
-
-    # دانلود فایل صوتی
+def handle_audio(update: Update, context: CallbackContext) -> None:
     file = update.message.audio.get_file()
-    file.download("user_audio.mp3")
+    file.download('audio.mp3')  # دانلود فایل به صورت MP3
 
-    # تبدیل فایل MP3 به WAV
-    wav_file = convert_mp3_to_wav("user_audio.mp3")
-    
-    # تبدیل گفتار به متن
-    transcription = transcribe_audio(wav_file)
-    
-    # ارسال متن به کاربر
-    update.message.reply_text(f"متن استخراج شده: \n{transcription}")
+    # تبدیل MP3 به WAV (speech_recognition فقط فایل WAV را می‌پذیرد)
+    audio = AudioSegment.from_mp3('audio.mp3')
+    audio.export('audio.wav', format='wav')
 
-# تنظیمات ربات تلگرام
-def main():
-    # توکن API ربات تلگرام خود را اینجا وارد کنید
-    TOKEN = os.getenv("TELEGRAM_API_TOKEN")
-    
-    # تنظیمات Updater برای ارتباط با تلگرام
-    updater = Updater(TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
+    # تبدیل فایل صوتی به متن
+    with sr.AudioFile('audio.wav') as source:
+        audio_data = recognizer.record(source)
+        try:
+            text = recognizer.recognize_google(audio_data, language='fa-IR')  # تبدیل به متن فارسی
+            update.message.reply_text(f"متن شناسایی‌شده: {text}")
 
-    # اضافه کردن هندلرها برای فرمان‌های ربات
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.audio, handle_audio))
+            # ارسال فایل متنی
+            with open("transcription.txt", "w", encoding="utf-8") as f:
+                f.write(text)
+            
+            update.message.reply_document(document=open("transcription.txt", "rb"))
 
-    # استفاده از webhook به جای polling
-    updater.start_webhook(listen="0.0.0.0", port=5000, url_path=TOKEN)
-    updater.bot.set_webhook(url=f"https://<YOUR_APP_NAME>.railway.app/{TOKEN}")
-    updater.idle()
+        except sr.UnknownValueError:
+            update.message.reply_text("متاسفانه نتواستم چیزی بشنوم.")
+        except sr.RequestError:
+            update.message.reply_text("خطا در ارتباط با سرویس شناسایی صوت.")
 
-# اجرای ربات در Flask
-@app.route('/')
-def hello():
-    return "Bot is running!"
+# افزودن هندلرها
+updater.dispatcher.add_handler(CommandHandler("start", start))
+updater.dispatcher.add_handler(MessageHandler(Filters.audio, handle_audio))
 
-if __name__ == '__main__':
-    # شروع ربات تلگرام در رشته اصلی (main thread)
-    main()
-    app.run(host='0.0.0.0', port=5000)
+# شروع ربات
+updater.start_polling()
+updater.idle()
