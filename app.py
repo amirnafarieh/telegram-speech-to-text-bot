@@ -1,7 +1,7 @@
 import os
 import telegram
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
 import speech_recognition as sr
 from pydub import AudioSegment
 from dotenv import load_dotenv
@@ -52,7 +52,7 @@ def handle_audio(update: Update, context: CallbackContext) -> None:
 
 # افزودن هندلرها
 updater.dispatcher.add_handler(CommandHandler("start", start))
-updater.dispatcher.add_handler(MessageHandler(Filters.audio, handle_audio))
+updater.dispatcher.add_handler(MessageHandler(filters.Audio, handle_audio))
 
 # شروع ربات
 updater.start_polling()
