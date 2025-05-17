@@ -15,12 +15,16 @@ recognizer = sr.Recognizer()
 
 # تابع start برای پاسخ به دستور /start
 async def start(update: Update, context: CallbackContext) -> None:
+    """این تابع برای پاسخ به دستور /start است."""
     await update.message.reply_text("سلام! لطفا فایل صوتی ارسال کنید.")
 
 # تابع برای پردازش فایل صوتی و تبدیل به متن
 async def handle_audio(update: Update, context: CallbackContext) -> None:
+    """این تابع فایل صوتی را دریافت کرده و آن را به متن تبدیل می‌کند."""
+    
     # دریافت فایل صوتی
     file = await update.message.audio.get_file()
+    
     # دانلود فایل به صورت MP3
     await file.download_as('audio.mp3')  
 
