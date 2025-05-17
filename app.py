@@ -1,37 +1,76 @@
+import os
 from telegram import Update
-from telegram.ext import Application, MessageHandler, ContextTypes, filters
-from pydub import AudioSegment
+from telegram.ext import Application, MessageHandler, CommandHandler, ContextTypes, filters
 import speech_recognition as sr
+from pydub import AudioSegment
 
-async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # دریافت فایل Voice و دانلود آن به عنوان voice_note.ogg
-    file_id = update.message.voice.file_id
-    file = await context.bot.get_file(file_id)
-    await file.download_to_drive(custom_path="voice_note.ogg")  # ذخیره پیام صوتی با نام voice_note.ogg
+# خواندن توکن از متغیر محیطی
+TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-    # تبدیل فایل .ogg به .wav با استفاده از pydub/ffmpeg (برای استفاده در تشخیص گفتار)
-    voice_audio = AudioSegment.from_file("voice_note.ogg", format="ogg")
-    voice_audio.export("voice_note.wav", format="wav")
+# تشخیص گفتار
+recognizer = sr.Recognizer()
 
-    # تبدیل گفتار به متن با SpeechRecognition (مثال با استفاده از سرویس Google)
-    recognizer = sr.Recognizer()
-    with sr.AudioFile("voice_note.wav") as source:
+# پاسخ به /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("سلام! لطفاً یک فایل صوتی (Voice یا MP3) بفرستید تا تبدیل به متن شود.")
+
+# هندل پیام‌های صوتی Voice
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    file = await context.bot.get_file(update.message.voice.file_id)
+    await file.download_to_drive("voice.ogg")
+
+    audio = AudioSegment.from_file("voice.ogg", format="ogg")
+    audio.export("converted.wav", format="wav")
+
+    with sr.AudioFile("converted.wav") as source:
         audio_data = recognizer.record(source)
-    text = recognizer.recognize_google(audio_data, language="fa-IR")
-    await update.message.reply_text(f"متن تشخیص‌داده‌شده: {text}")
+        try:
+            text = recognizer.recognize_google(audio_data, language="fa-IR")
+            await update.message.reply_text(f"متن شناسایی‌شده:\n{text}")
+            with open("transcription.txt", "w", encoding="utf-8") as f:
+                f.write(text)
+            await update.message.reply_document(open("transcription.txt", "rb"))
+        except sr.UnknownValueError:
+            await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
+        except sr.RequestError:
+            await update.message.reply_text("خطا در ارتباط با سرور Google Speech!")
 
-async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # دریافت فایل Audio و دانلود آن به عنوان audio_file.mp3 (یا پسوند اصلی فایل ارسالی)
-    file_id = update.message.audio.file_id
-    file = await context.bot.get_file(file_id)
-    # استفاده از نام اصلی فایل در تلگرام در صورت موجود بودن
-    default_filename = update.message.audio.file_name or "audio_file"
-    await file.download_to_drive(custom_path=default_filename)  # مثلاً audio_file.mp3
-    await update.message.reply_text("فایل صوتی شما ذخیره شد.")
+# هندل فایل‌های صوتی Audio
+async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    file = await context.bot.get_file(update.message.audio.file_id)
+    filename = update.message.audio.file_name or "audio.mp3"
+    await file.download_to_drive(filename)
+
+    audio = AudioSegment.from_file(filename)
+    audio.export("converted.wav", format="wav")
+
+    with sr.AudioFile("converted.wav") as source:
+        audio_data = recognizer.record(source)
+        try:
+            text = recognizer.recognize_google(audio_data, language="fa-IR")
+            await update.message.reply_text(f"متن شناسایی‌شده:\n{text}")
+            with open("transcription.txt", "w", encoding="utf-8") as f:
+                f.write(text)
+            await update.message.reply_document(open("transcription.txt", "rb"))
+        except sr.UnknownValueError:
+            await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
+        except sr.RequestError:
+            await update.message.reply_text("خطا در ارتباط با سرور Google Speech!")
+
+# راه‌اندازی برنامه
+def main():
+    app = Application.builder().token(TOKEN).build()
+
+    # فرمان شروع
+    app.add_handler(CommandHandler("start", start))
+
+    # دریافت پیام صوتی (voice note)
+    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
+
+    # دریافت فایل موسیقی یا صوتی
+    app.add_handler(MessageHandler(filters.AUDIO, handle_audio))
+
+    app.run_polling()
 
 if __name__ == "__main__":
-    app = Application.builder().token("توکن-ربات-شما").build()
-    # افزودن هندلرها برای پیام‌های صوتی و فایل‌های صوتی
-    app.add_handler(MessageHandler(filters.VOICE, handle_voice))
-    app.add_handler(MessageHandler(filters.AUDIO, handle_audio))
-    app.run_polling()
+    main()
