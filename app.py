@@ -17,6 +17,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # هندل پیام‌های صوتی Voice
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("در حال تبدیل صدا به متن هستیم... لطفاً کمی منتظر باشید.")
+
     file = await context.bot.get_file(update.message.voice.file_id)
     await file.download_to_drive("voice.ogg")
 
@@ -50,6 +52,8 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # هندل فایل‌های صوتی Audio
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("در حال تبدیل صدا به متن هستیم... لطفاً کمی منتظر باشید.")
+
     file = await context.bot.get_file(update.message.audio.file_id)
     filename = update.message.audio.file_name or "audio.mp3"
     await file.download_to_drive(filename)
