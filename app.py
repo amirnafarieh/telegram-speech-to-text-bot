@@ -76,3 +76,4 @@ if __name__ == '__main__':
     thread = Thread(target=main)
     thread.start()
     app.run(host='0.0.0.0', port=5000)
+
