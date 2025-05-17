@@ -1,0 +1,3 @@
+vosk
+python-telegram-bot
+pydub
