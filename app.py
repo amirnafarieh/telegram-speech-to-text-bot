@@ -117,7 +117,7 @@ async def process_audio(update: Update, context: ContextTypes.DEFAULT_TYPE, file
 
             await processing_msg.delete()
             for sentence in sentences:
-                await update.message.reply_text(f"📝 {sentence}")
+                await update.message.reply_text(f" {sentence}")
 
             user_transcripts[user_id] = sentences
             increment_usage(user_id)
