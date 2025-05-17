@@ -3,7 +3,7 @@ import speech_recognition as sr
 from pydub import AudioSegment
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-from flask import Flask
+from flask import Flask, request
 import logging
 
 # تنظیمات برای شروع Flask
@@ -66,8 +66,9 @@ def main():
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(MessageHandler(Filters.audio, handle_audio))
 
-    # شروع ربات تلگرام
-    updater.start_polling()
+    # استفاده از webhook به جای polling
+    updater.start_webhook(listen="0.0.0.0", port=5000, url_path=TOKEN)
+    updater.bot.set_webhook(url=f"https://<YOUR_APP_NAME>.railway.app/{TOKEN}")
     updater.idle()
 
 # اجرای ربات در Flask
@@ -76,6 +77,5 @@ def hello():
     return "Bot is running!"
 
 if __name__ == '__main__':
-    # شروع ربات تلگرام در رشته اصلی (main thread)
     main()
     app.run(host='0.0.0.0', port=5000)
