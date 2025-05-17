@@ -1,5 +1,4 @@
 import os
-import telegram
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 import speech_recognition as sr
@@ -20,8 +19,10 @@ async def start(update: Update, context: CallbackContext) -> None:
 
 # تابع برای پردازش فایل صوتی و تبدیل به متن
 async def handle_audio(update: Update, context: CallbackContext) -> None:
+    # دریافت فایل صوتی
     file = await update.message.audio.get_file()
-    await file.download('audio.mp3')  # دانلود فایل به صورت MP3
+    # دانلود فایل به صورت MP3
+    await file.download_as('audio.mp3')  
 
     # تبدیل MP3 به WAV (speech_recognition فقط فایل WAV را می‌پذیرد)
     audio = AudioSegment.from_mp3('audio.mp3')
@@ -31,7 +32,8 @@ async def handle_audio(update: Update, context: CallbackContext) -> None:
     with sr.AudioFile('audio.wav') as source:
         audio_data = recognizer.record(source)
         try:
-            text = recognizer.recognize_google(audio_data, language='fa-IR')  # تبدیل به متن فارسی
+            # شناسایی گفتار به زبان فارسی
+            text = recognizer.recognize_google(audio_data, language='fa-IR')  
             await update.message.reply_text(f"متن شناسایی‌شده: {text}")
 
             # ارسال فایل متنی
