@@ -4,11 +4,6 @@ from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
 import speech_recognition as sr
 from pydub import AudioSegment
-from dotenv import load_dotenv
-
-# بارگذاری متغیرهای محیطی از فایل .env (این بخش فقط برای محیط‌های لوکال است)
-# در Railway نیازی به این خط نیست زیرا متغیرهای محیطی در تنظیمات Railway تنظیم می‌شوند
-load_dotenv()
 
 # خواندن توکن از متغیر محیطی
 TOKEN = os.getenv('TELEGRAM_TOKEN')  # توکن را از متغیر محیطی می‌خوانیم
