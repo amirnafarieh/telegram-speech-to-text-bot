@@ -7,8 +7,6 @@ import re
 
 # خواندن توکن از متغیر محیطی
 TOKEN = os.getenv("TELEGRAM_TOKEN")
-
-# تشخیص گفتار
 recognizer = sr.Recognizer()
 
 # پاسخ به /start
@@ -17,7 +15,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # هندل پیام‌های صوتی Voice
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("در حال تبدیل صدا به متن هستیم... لطفاً کمی منتظر باشید.")
+    processing_message = await update.message.reply_text("در حال تبدیل صدا به متن هستیم... لطفاً کمی منتظر باشید.")
 
     file = await context.bot.get_file(update.message.voice.file_id)
     await file.download_to_drive("voice.ogg")
@@ -31,6 +29,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             result = recognizer.recognize_google(audio_data, language="fa-IR", show_all=True)
 
             if not result or "alternative" not in result:
+                await processing_message.delete()
                 await update.message.reply_text("متنی شناسایی نشد.")
                 return
 
@@ -38,6 +37,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sentences = re.split(r'[.،؛!؟]\s*', full_text)
             sentences = [s.strip() for s in sentences if s.strip()]
 
+            await processing_message.delete()
             for sentence in sentences:
                 await update.message.reply_text(sentence)
 
@@ -47,13 +47,15 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("برای تبدیل فایل بعدی، لطفاً فایل صوتی دیگری ارسال کنید.")
 
         except sr.UnknownValueError:
+            await processing_message.delete()
             await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
         except sr.RequestError:
+            await processing_message.delete()
             await update.message.reply_text("خطا در ارتباط با سرور Google Speech!")
 
 # هندل فایل‌های صوتی Audio
 async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("در حال تبدیل صدا به متن هستیم... لطفاً کمی منتظر باشید.")
+    processing_message = await update.message.reply_text("در حال تبدیل صدا به متن هستیم... لطفاً کمی منتظر باشید.")
 
     file = await context.bot.get_file(update.message.audio.file_id)
     filename = update.message.audio.file_name or "audio.mp3"
@@ -68,6 +70,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             result = recognizer.recognize_google(audio_data, language="fa-IR", show_all=True)
 
             if not result or "alternative" not in result:
+                await processing_message.delete()
                 await update.message.reply_text("متنی شناسایی نشد.")
                 return
 
@@ -75,6 +78,7 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sentences = re.split(r'[.،؛!؟]\s*', full_text)
             sentences = [s.strip() for s in sentences if s.strip()]
 
+            await processing_message.delete()
             for sentence in sentences:
                 await update.message.reply_text(sentence)
 
@@ -84,18 +88,18 @@ async def handle_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("برای تبدیل فایل بعدی، لطفاً فایل صوتی دیگری ارسال کنید.")
 
         except sr.UnknownValueError:
+            await processing_message.delete()
             await update.message.reply_text("نتونستم متن رو تشخیص بدم 😔")
         except sr.RequestError:
+            await processing_message.delete()
             await update.message.reply_text("خطا در ارتباط با سرور Google Speech!")
 
-# راه‌اندازی برنامه
+# اجرای ربات
 def main():
     app = Application.builder().token(TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.AUDIO, handle_audio))
-
     app.run_polling()
 
 if __name__ == "__main__":
