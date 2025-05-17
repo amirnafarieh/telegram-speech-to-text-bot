@@ -3,7 +3,7 @@ import speech_recognition as sr
 from pydub import AudioSegment
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-from flask import Flask, request
+from flask import Flask
 import logging
 
 # تنظیمات برای شروع Flask
@@ -77,5 +77,6 @@ def hello():
     return "Bot is running!"
 
 if __name__ == '__main__':
+    # شروع ربات تلگرام در رشته اصلی (main thread)
     main()
     app.run(host='0.0.0.0', port=5000)
